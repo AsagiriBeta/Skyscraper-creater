@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request, send_file, flash
-from forms import SkyscraperForm
-from builder import build_skyscraper
 import io
-from litemapy import Schematic
+
+from flask import Blueprint, render_template, send_file, flash
+
+from builder import build_skyscraper
+from forms import SkyscraperForm
 
 main_bp = Blueprint('main', __name__)
 
@@ -46,25 +47,23 @@ def parse_wall_layer_v2(blocks, patterns, intervals, layer_pattern):
 def index():
     import traceback
     form = SkyscraperForm()
-    schematic_file = None
     if form.validate_on_submit():
         try:
             print('[INFO] 表单已提交，开始解析参数')
             # 解析节点
             nodes = [tuple(map(int, pair.split(','))) for pair in form.nodes.data.split(';')]
             print(f'[DEBUG] nodes: {nodes}')
-            # 组装两层外墙配置
+            # 组装两层外墙配置（顺序调整：最内层在前，最外层在后）
             wall_layers = [
-                parse_wall_layer(
-                    [form.wall_layer_1_a.data, form.wall_layer_1_b.data, form.wall_layer_1_c.data],
-                    # 只传递一个统一的 pattern
-                    [form.wall_pattern_1.data] * 3,
-                    form.wall_ratio_1.data, form.wall_pattern_1.data),
                 parse_wall_layer_v2(
                     [form.wall_layer_2_a.data, form.wall_layer_2_b.data, form.wall_layer_2_c.data],
                     [form.wall_layer_2_a_pattern.data, form.wall_layer_2_b_pattern.data, form.wall_layer_2_c_pattern.data],
                     [form.wall_layer_2_a_interval.data, form.wall_layer_2_b_interval.data, form.wall_layer_2_c_interval.data],
-                    None)  # 第二层不再传递 wall_pattern_2
+                    None),  # 第二层
+                parse_wall_layer(
+                    [form.wall_layer_1_a.data, form.wall_layer_1_b.data, form.wall_layer_1_c.data],
+                    [form.wall_pattern_1.data] * 3,
+                    form.wall_ratio_1.data, form.wall_pattern_1.data)  # 第一层
             ]
             print(f'[DEBUG] wall_layers: {wall_layers}')
             reg = build_skyscraper(

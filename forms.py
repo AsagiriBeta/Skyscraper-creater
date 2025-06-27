@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, BooleanField, SelectField, SubmitField, SelectMultipleField
+from wtforms import StringField, IntegerField, BooleanField, SelectField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, Regexp
 
 # 第一层外墙专用选项：仅玻璃、混凝土、平滑石、不设置

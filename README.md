@@ -24,13 +24,6 @@ pip install flask flask-wtf litemapy
 2. 打开浏览器访问 [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 3. 按页面提示填写参数，点击“生成并下载litematic”即可获得建筑文件。
 
-## 命令行模式
-直接运行 `main.py` 按提示输入参数即可生成 litematic 文件：
-
-```bash
-python main.py
-```
-
 ## 注意事项
 - 生成的文件需配合 Litematica Mod 使用
 - 若遇到依赖问题，请确保已正确安装 `litemapy` 和 `flask` 等库

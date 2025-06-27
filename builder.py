@@ -22,8 +22,7 @@ def build_skyscraper(
     logging.info(f"build_skyscraper: nodes={nodes}, floor_height={floor_height}, total_height={total_height}, partition={partition}, x_parts={x_parts}, z_parts={z_parts}")
     min_x, min_z, max_x, max_z = get_bounds(nodes)
     wall_thickness = len(wall_layers)
-    # 修正：将 wall_layers 顺序反转，使 wall_layers[0] 为最外层
-    wall_layers = wall_layers[::-1]
+    # 直接使用 wall_layers 顺序，不再反转
     logging.debug(f"Bounds: min_x={min_x}, min_z={min_z}, max_x={max_x}, max_z={max_z}, wall_thickness={wall_thickness}")
     reg = Region(min_x-wall_thickness+1, 0, min_z-wall_thickness+1, max_x+wall_thickness-1, total_height, max_z+wall_thickness-1)
     ceiling_blocks = ceiling_blocks or ["minecraft:gray_concrete"]
@@ -81,7 +80,7 @@ def build_skyscraper(
                             # 线段点判定：三点共线且在区间内
                             if (dx == 0 and x == x1 and min(z1, z2) <= z <= max(z1, z2)) or \
                                (dz == 0 and z == z1 and min(x1, x2) <= x <= max(x1, x2)) or \
-                               (dx != 0 and dz != 0 and (x - x1) * dz == (z - z1) * dx and \
+                               (dx != 0 and dz != 0 and (x - x1) * dz == (z - z1) * dx and
                                 min(x1, x2) <= x <= max(x1, x2) and min(z1, z2) <= z <= max(z1, z2)):
                                 on_edge = True
                                 break
@@ -102,7 +101,6 @@ def build_skyscraper(
                             blocks = [BlockState(b) for b in layer_info["blocks"]]
                             patterns = layer_info["block_patterns"]
                             intervals = layer_info["intervals"]
-                            layer_pattern = pattern
                             placed = False
                             for b_idx, (block, pat, interval) in enumerate(zip(blocks, patterns, intervals)):
                                 idx2 = (z if pat == "vertical" else y) if (abs(x - min_x) < 1e-6 or abs(x - max_x) < 1e-6) else (x if pat == "vertical" else y)
