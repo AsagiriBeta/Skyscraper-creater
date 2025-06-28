@@ -31,6 +31,18 @@
                 {{ form.partition_blocks.label }} {{ form.partition_blocks(class_="form-control") }}
             </div>
         </div>
+        <!-- 新增 schematic 元数据输入 -->
+        <div class="row mb-3">
+            <div class="col">
+                {{ form.schematic_name.label }} {{ form.schematic_name(class_="form-control") }}
+            </div>
+            <div class="col">
+                {{ form.schematic_author.label }} {{ form.schematic_author(class_="form-control") }}
+            </div>
+            <div class="col">
+                {{ form.schematic_description.label }} {{ form.schematic_description(class_="form-control") }}
+            </div>
+        </div>
         <div class="row mb-3">
             <div class="col">
                 <h5>第一层外墙</h5>

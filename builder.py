@@ -22,7 +22,6 @@ def build_skyscraper(
     logging.info(f"build_skyscraper: nodes={nodes}, floor_height={floor_height}, total_height={total_height}, partition={partition}, x_parts={x_parts}, z_parts={z_parts}")
     min_x, min_z, max_x, max_z = get_bounds(nodes)
     wall_thickness = len(wall_layers)
-    # 直接使用 wall_layers 顺序，不再反转
     logging.debug(f"Bounds: min_x={min_x}, min_z={min_z}, max_x={max_x}, max_z={max_z}, wall_thickness={wall_thickness}")
     reg = Region(min_x-wall_thickness+1, 0, min_z-wall_thickness+1, max_x+wall_thickness-1, total_height, max_z+wall_thickness-1)
     ceiling_blocks = ceiling_blocks or ["minecraft:gray_concrete"]
@@ -65,11 +64,10 @@ def build_skyscraper(
                 for layer in reversed(range(wall_thickness)):
                     poly = wall_polys[layer]
                     on_edge = False
-                    # 修正：更健壮的点是否在多边形边上的判断
+                    # 点到多边形边的距离小于0.5格即视为在边上
                     for i in range(len(poly)):
                         x1, z1 = poly[i]
                         x2, z2 = poly[(i+1)%len(poly)]
-                        # 判断点(x,z)是否在(x1,z1)-(x2,z2)线段上
                         dx = x2 - x1
                         dz = z2 - z1
                         if dx == 0 and dz == 0:
@@ -77,11 +75,21 @@ def build_skyscraper(
                                 on_edge = True
                                 break
                         else:
-                            # 线段点判定：三点共线且在区间内
-                            if (dx == 0 and x == x1 and min(z1, z2) <= z <= max(z1, z2)) or \
-                               (dz == 0 and z == z1 and min(x1, x2) <= x <= max(x1, x2)) or \
-                               (dx != 0 and dz != 0 and (x - x1) * dz == (z - z1) * dx and
-                                min(x1, x2) <= x <= max(x1, x2) and min(z1, z2) <= z <= max(z1, z2)):
+                            # 点到线段距离
+                            px, pz = x, z
+                            vx, vz = dx, dz
+                            wx, wz = px - x1, pz - z1
+                            c1 = vx * wx + vz * wz
+                            c2 = vx * vx + vz * vz
+                            if c2 == 0:
+                                dist2 = (px - x1) ** 2 + (pz - z1) ** 2
+                            else:
+                                b = c1 / c2
+                                b = max(0, min(1, b))
+                                proj_x = x1 + b * vx
+                                proj_z = z1 + b * dz
+                                dist2 = (px - proj_x) ** 2 + (pz - proj_z) ** 2
+                            if dist2 < 0.25:  # 距离小于0.5格
                                 on_edge = True
                                 break
                     if on_edge and layer in outer_wall_layers:
@@ -102,8 +110,45 @@ def build_skyscraper(
                             patterns = layer_info["block_patterns"]
                             intervals = layer_info["intervals"]
                             placed = False
+                            # 修正斜墙条纹间隔逻辑
+                            edge_idx = None
+                            edge_pos = None
+                            for i in range(len(poly)):
+                                x1, z1 = poly[i]
+                                x2, z2 = poly[(i+1)%len(poly)]
+                                dx = x2 - x1
+                                dz = z2 - z1
+                                if dx == 0 and dz == 0:
+                                    if (x, z) == (x1, z1):
+                                        edge_idx = i
+                                        edge_pos = 0
+                                        break
+                                else:
+                                    px, pz = x, z
+                                    vx, vz = dx, dz
+                                    wx, wz = px - x1, pz - z1
+                                    c1 = vx * wx + vz * wz
+                                    c2 = vx * vx + vz * vz
+                                    if c2 == 0:
+                                        dist2 = (px - x1) ** 2 + (pz - z1) ** 2
+                                        b = 0
+                                    else:
+                                        b = c1 / c2
+                                        b = max(0, min(1, b))
+                                        proj_x = x1 + b * vx
+                                        proj_z = z1 + b * dz
+                                        dist2 = (px - proj_x) ** 2 + (pz - proj_z) ** 2
+                                    if dist2 < 0.25:
+                                        edge_idx = i
+                                        edge_pos = round(((x - x1) ** 2 + (z - z1) ** 2) ** 0.5)
+                                        break
                             for b_idx, (block, pat, interval) in enumerate(zip(blocks, patterns, intervals)):
-                                idx2 = (z if pat == "vertical" else y) if (abs(x - min_x) < 1e-6 or abs(x - max_x) < 1e-6) else (x if pat == "vertical" else y)
+                                if edge_idx is not None:
+                                    # 用edge_pos作为条纹编号，保证斜墙也有规律
+                                    idx2 = edge_pos if pat == "vertical" else y
+                                else:
+                                    # 原逻辑
+                                    idx2 = (z if pat == "vertical" else y) if (abs(x - min_x) < 1e-6 or abs(x - max_x) < 1e-6) else (x if pat == "vertical" else y)
                                 if interval > 0 and idx2 % interval == 0 and block.id != "minecraft:air":
                                     reg[x, y, z] = block
                                     placed = True
