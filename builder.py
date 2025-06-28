@@ -21,10 +21,15 @@ def build_skyscraper(
     ceiling_blocks=None, light_block="minecraft:sea_lantern", light_density=4
 ):
     logging.info(f"build_skyscraper: nodes={nodes}, floor_height={floor_height}, total_height={total_height}, partition_first_floor={partition_first_floor}, partition_last_floor={partition_last_floor}, partition_other_floors={partition_other_floors}, x_parts={x_parts}, z_parts={z_parts}")
+    # === 修正：所有坐标平移，使最小x/z为0 ===
     min_x, min_z, max_x, max_z = get_bounds(nodes)
+    offset_x = min_x
+    offset_z = min_z
+    nodes_rel = [(x - offset_x, z - offset_z) for x, z in nodes]
+    min_x_rel, min_z_rel, max_x_rel, max_z_rel = get_bounds(nodes_rel)
     wall_thickness = len(wall_layers)
-    logging.debug(f"Bounds: min_x={min_x}, min_z={min_z}, max_x={max_x}, max_z={max_z}, wall_thickness={wall_thickness}")
-    reg = Region(min_x-wall_thickness+1, 0, min_z-wall_thickness+1, max_x+wall_thickness-1, total_height, max_z+wall_thickness-1)
+    logging.debug(f"Bounds: min_x={min_x_rel}, min_z={min_z_rel}, max_x={max_x_rel}, max_z={max_z_rel}, wall_thickness={wall_thickness}")
+    reg = Region(min_x_rel-wall_thickness+1, 0, min_z_rel-wall_thickness+1, max_x_rel+wall_thickness-1, total_height, max_z_rel+wall_thickness-1)
     ceiling_blocks = ceiling_blocks or ["minecraft:gray_concrete"]
     air = BlockState("minecraft:air")
     partition_blocks = partition_blocks or ["minecraft:stone_bricks"]
@@ -34,21 +39,21 @@ def build_skyscraper(
     z_divs = []
     # 只在需要加隔断墙的楼层计算分割线
     if (partition_first_floor or partition_last_floor or partition_other_floors) and x_parts > 0:
-        step = (max_x - min_x + 1) / x_parts
+        step = (max_x_rel - min_x_rel + 1) / x_parts
         if step < 1:
-            x_divs = [min_x]
+            x_divs = [min_x_rel]
         else:
-            x_divs = [round(min_x + step * i) for i in range(1, x_parts)]
+            x_divs = [round(min_x_rel + step * i) for i in range(1, x_parts)]
     if (partition_first_floor or partition_last_floor or partition_other_floors) and z_parts > 0:
-        step = (max_z - min_z + 1) / z_parts
+        step = (max_z_rel - min_z_rel + 1) / z_parts
         if step < 1:
-            z_divs = [min_z]
+            z_divs = [min_z_rel]
         else:
-            z_divs = [round(min_z + step * i) for i in range(1, z_parts)]
+            z_divs = [round(min_z_rel + step * i) for i in range(1, z_parts)]
 
     wall_polys = []
     for i in range(wall_thickness):
-        wall_polys.append(offset_polygon(nodes, i))
+        wall_polys.append(offset_polygon(nodes_rel, i))
 
     outer_wall_layers = set()
     if wall_thickness >= 2:
@@ -70,8 +75,8 @@ def build_skyscraper(
             do_partition = partition_last_floor
         else:
             do_partition = partition_other_floors
-        for x in range(min_x-wall_thickness+1, max_x+wall_thickness):
-            for z in range(min_z-wall_thickness+1, max_z+wall_thickness):
+        for x in range(min_x_rel-wall_thickness+1, max_x_rel+wall_thickness):
+            for z in range(min_z_rel-wall_thickness+1, max_z_rel+wall_thickness):
                 wall_set = False
                 for layer in reversed(range(wall_thickness)):
                     poly = wall_polys[layer]
@@ -107,13 +112,13 @@ def build_skyscraper(
                     if on_edge and layer in outer_wall_layers:
                         layer_info = wall_layers[layer]
                         pattern = layer_info.get("layer_pattern", "vertical") if isinstance(layer_info, dict) else "vertical"
-                        if abs(x - min_x) < 1e-6:
+                        if abs(x - min_x_rel) < 1e-6:
                             idx = (z // 1) if pattern == "vertical" else (y // 1)
-                        elif abs(x - max_x) < 1e-6:
+                        elif abs(x - max_x_rel) < 1e-6:
                             idx = (z // 1) if pattern == "vertical" else (y // 1)
-                        elif abs(z - min_z) < 1e-6:
+                        elif abs(z - min_z_rel) < 1e-6:
                             idx = (x // 1) if pattern == "vertical" else (y // 1)
-                        elif abs(z - max_z) < 1e-6:
+                        elif abs(z - max_z_rel) < 1e-6:
                             idx = (x // 1) if pattern == "vertical" else (y // 1)
                         else:
                             idx = (x // 1) if pattern == "vertical" else (y // 1)
@@ -160,7 +165,7 @@ def build_skyscraper(
                                     idx2 = edge_pos if pat == "vertical" else y
                                 else:
                                     # 原逻辑
-                                    idx2 = (z if pat == "vertical" else y) if (abs(x - min_x) < 1e-6 or abs(x - max_x) < 1e-6) else (x if pat == "vertical" else y)
+                                    idx2 = (z if pat == "vertical" else y) if (abs(x - min_x_rel) < 1e-6 or abs(x - max_x_rel) < 1e-6) else (x if pat == "vertical" else y)
                                 if interval > 0 and idx2 % interval == 0 and block.id != "minecraft:air":
                                     reg[x, y, z] = block
                                     placed = True
@@ -188,7 +193,7 @@ def build_skyscraper(
                         continue
                     # 楼板和灯的生成逻辑
                     if slab_base:
-                        if ((x - min_x) % light_density == 0) and ((z - min_z) % light_density == 0):
+                        if ((x - min_x_rel) % light_density == 0) and ((z - min_z_rel) % light_density == 0):
                             reg[x, y, z] = light_state
                         else:
                             blocks = [BlockState(b) for b in ceiling_blocks]
