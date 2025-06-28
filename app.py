@@ -14,6 +14,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24))
 # 延长CSRF令牌有效期（单位秒，默认3600=1小时），如需灵活可用环境变量控制
 app.config['WTF_CSRF_TIME_LIMIT'] = int(os.environ.get('WTF_CSRF_TIME_LIMIT', 7200))  # 2小时
+#app.config['WTF_CSRF_ENABLED'] = False
 app.register_blueprint(main_bp)
 
 if __name__ == '__main__':

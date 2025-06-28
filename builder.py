@@ -15,11 +15,12 @@ def get_block_by_ratio(blocks, ratios, idx):
     return blocks[0]
 
 def build_skyscraper(
-    nodes, wall_layers, floor_height, total_height, partition,
+    nodes, wall_layers, floor_height, total_height,
+    partition_first_floor=False, partition_last_floor=False, partition_other_floors=False,
     x_parts=0, z_parts=0, partition_blocks=None,
     ceiling_blocks=None, light_block="minecraft:sea_lantern", light_density=4
 ):
-    logging.info(f"build_skyscraper: nodes={nodes}, floor_height={floor_height}, total_height={total_height}, partition={partition}, x_parts={x_parts}, z_parts={z_parts}")
+    logging.info(f"build_skyscraper: nodes={nodes}, floor_height={floor_height}, total_height={total_height}, partition_first_floor={partition_first_floor}, partition_last_floor={partition_last_floor}, partition_other_floors={partition_other_floors}, x_parts={x_parts}, z_parts={z_parts}")
     min_x, min_z, max_x, max_z = get_bounds(nodes)
     wall_thickness = len(wall_layers)
     logging.debug(f"Bounds: min_x={min_x}, min_z={min_z}, max_x={max_x}, max_z={max_z}, wall_thickness={wall_thickness}")
@@ -31,13 +32,14 @@ def build_skyscraper(
 
     x_divs = []
     z_divs = []
-    if partition and x_parts > 0:
+    # 只在需要加隔断墙的楼层计算分割线
+    if (partition_first_floor or partition_last_floor or partition_other_floors) and x_parts > 0:
         step = (max_x - min_x + 1) / x_parts
         if step < 1:
             x_divs = [min_x]
         else:
             x_divs = [round(min_x + step * i) for i in range(1, x_parts)]
-    if partition and z_parts > 0:
+    if (partition_first_floor or partition_last_floor or partition_other_floors) and z_parts > 0:
         step = (max_z - min_z + 1) / z_parts
         if step < 1:
             z_divs = [min_z]
@@ -58,6 +60,16 @@ def build_skyscraper(
         if y % 10 == 0:
             logging.debug(f"Processing layer y={y}/{total_height}")
         slab_base = (y % floor_height == 0)
+        # 修正：判断本层是否加隔断墙，整层都应加
+        floor_idx = y // floor_height
+        is_first_floor = (floor_idx == 0)
+        is_last_floor = (floor_idx == (total_height // floor_height - 1))
+        if is_first_floor:
+            do_partition = partition_first_floor
+        elif is_last_floor:
+            do_partition = partition_last_floor
+        else:
+            do_partition = partition_other_floors
         for x in range(min_x-wall_thickness+1, max_x+wall_thickness):
             for z in range(min_z-wall_thickness+1, max_z+wall_thickness):
                 wall_set = False
@@ -168,22 +180,21 @@ def build_skyscraper(
                     continue
                 inside = point_in_polygon(x, z, wall_polys[0])
                 if inside:
-                    is_partition_wall = False
-                    if partition and partition_blocks:
-                        if (x_parts > 0 and x in x_divs) or (z_parts > 0 and z in z_divs):
-                            blocks = [BlockState(b) for b in partition_blocks]
-                            idx = (x + z + y) % len(blocks)
-                            reg[x, y, z] = blocks[idx]
-                            is_partition_wall = True
-                    if not is_partition_wall:
-                        if slab_base:
-                            if ((x - min_x) % light_density == 0) and ((z - min_z) % light_density == 0):
-                                reg[x, y, z] = light_state
-                            else:
-                                blocks = [BlockState(b) for b in ceiling_blocks]
-                                idx = (x + z) % len(blocks)
-                                reg[x, y, z] = blocks[idx]
+                    # 优先生成隔断墙，不依赖 slab_base
+                    if do_partition and partition_blocks and ((x_parts > 0 and x in x_divs) or (z_parts > 0 and z in z_divs)):
+                        blocks = [BlockState(b) for b in partition_blocks]
+                        idx = (x + z + y) % len(blocks)
+                        reg[x, y, z] = blocks[idx]
+                        continue
+                    # 楼板和灯的生成逻辑
+                    if slab_base:
+                        if ((x - min_x) % light_density == 0) and ((z - min_z) % light_density == 0):
+                            reg[x, y, z] = light_state
                         else:
-                            reg[x, y, z] = air
+                            blocks = [BlockState(b) for b in ceiling_blocks]
+                            idx = (x + z) % len(blocks)
+                            reg[x, y, z] = blocks[idx]
+                    else:
+                        reg[x, y, z] = air
     logging.info("build_skyscraper 完成")
     return reg

@@ -70,8 +70,10 @@ def index():
                 nodes=nodes,
                 wall_layers=wall_layers,
                 floor_height=form.floor_height.data,
-                total_height=form.total_height.data,
-                partition=form.partition.data,
+                total_height=form.floor_height.data * form.total_floors.data,
+                partition_first_floor=form.partition_first_floor.data,
+                partition_last_floor=form.partition_last_floor.data,
+                partition_other_floors=form.partition_other_floors.data,
                 x_parts=form.x_parts.data,
                 z_parts=form.z_parts.data,
                 partition_blocks=[

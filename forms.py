@@ -72,8 +72,10 @@ WALL_LAYER_2_CHOICES = [
 class SkyscraperForm(FlaskForm):
     nodes = StringField('节点坐标（格式: x1,z1;x2,z2;...）', validators=[DataRequired()])
     floor_height = IntegerField('每层高度', validators=[DataRequired(), NumberRange(min=1)])
-    total_height = IntegerField('总高度', validators=[DataRequired(), NumberRange(min=1)])
-    partition = BooleanField('每层加隔断墙')
+    total_floors = IntegerField('总层数', validators=[DataRequired(), NumberRange(min=1)])
+    partition_first_floor = BooleanField('最低层加隔断墙')
+    partition_last_floor = BooleanField('最高层加隔断墙')
+    partition_other_floors = BooleanField('其余层加隔断墙')
     x_parts = IntegerField('x轴等分数', default=0)
     z_parts = IntegerField('z轴等分数', default=0)
     wall_pattern = SelectField(

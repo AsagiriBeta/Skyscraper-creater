@@ -16,10 +16,14 @@
                 {{ form.floor_height.label }} {{ form.floor_height(class_="form-control") }}
             </div>
             <div class="col">
-                {{ form.total_height.label }} {{ form.total_height(class_="form-control") }}
+                {{ form.total_floors.label }} {{ form.total_floors(class_="form-control") }}
             </div>
         </div>
-        <div class="mb-3">{{ form.partition.label }} {{ form.partition() }}</div>
+        <div class="mb-3">
+            {{ form.partition_first_floor() }} {{ form.partition_first_floor.label }}
+            {{ form.partition_last_floor() }} {{ form.partition_last_floor.label }}
+            {{ form.partition_other_floors() }} {{ form.partition_other_floors.label }}
+        </div>
         <div class="row mb-3">
             <div class="col">
                 {{ form.x_parts.label }} {{ form.x_parts(class_="form-control") }}
