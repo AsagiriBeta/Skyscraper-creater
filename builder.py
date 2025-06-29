@@ -175,9 +175,45 @@ def build_skyscraper(
                         elif isinstance(layer_info, dict) and "ratios" in layer_info:
                             blocks = [BlockState(b) for b in layer_info["blocks"]]
                             ratios = layer_info["ratios"]
-                            reg[x, y, z] = get_block_by_ratio(blocks, ratios, idx)
+                            # 用点到当前墙边起点的距离作为比例交替依据
+                            edge_length = None
+                            for i in range(len(poly)):
+                                x1, z1 = poly[i]
+                                x2, z2 = poly[(i+1)%len(poly)]
+                                dx = x2 - x1
+                                dz = z2 - z1
+                                if dx == 0 and dz == 0:
+                                    if (x, z) == (x1, z1):
+                                        edge_length = 0
+                                        break
+                                else:
+                                    px, pz = x, z
+                                    vx, vz = dx, dz
+                                    wx, wz = px - x1, pz - z1
+                                    c1 = vx * wx + vz * wz
+                                    c2 = vx * vx + vz * vz
+                                    if c2 == 0:
+                                        b = 0
+                                    else:
+                                        b = c1 / c2
+                                        b = max(0, min(1, b))
+                                    proj_x = x1 + b * vx
+                                    proj_z = z1 + b * dz
+                                    dist2 = (px - proj_x) ** 2 + (pz - proj_z) ** 2
+                                    if dist2 < 0.25:
+                                        edge_length = ((proj_x - x1) ** 2 + (proj_z - z1) ** 2) ** 0.5
+                                        break
+                            idx_ratio = int(round(edge_length)) if edge_length is not None else 0
+                            reg[x, y, z] = get_block_by_ratio(blocks, ratios, idx_ratio)
                         else:
                             blocks = [BlockState(b) for b in layer_info]
+                            # 修正：南北侧用z，东西侧用x，均交替
+                            if abs(x - min_x_rel) < 1e-6 or abs(x - max_x_rel) < 1e-6:
+                                idx = z
+                            elif abs(z - min_z_rel) < 1e-6 or abs(z - max_z_rel) < 1e-6:
+                                idx = x
+                            else:
+                                idx = x  # 默认
                             reg[x, y, z] = blocks[idx % len(blocks)]
                         wall_set = True
                         break
